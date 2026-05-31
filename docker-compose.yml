@@ -1,0 +1,12 @@
+services:
+  analyzer:
+    build: .
+    env_file: .env
+    volumes:
+      - ./spring-rest-sakila-main:/codebase:ro
+      - ./output:/output
+    command:
+      - --source
+      - /codebase
+      - --output
+      - /output/report.json
