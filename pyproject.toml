@@ -17,6 +17,7 @@ dependencies = [
     "requests",
     "opentelemetry-api",
     "opentelemetry-sdk",
+    "langgraph>=0.2",
 ]
 
 [dependency-groups]
