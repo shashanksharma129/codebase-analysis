@@ -1,0 +1,32 @@
+[project]
+name = "codebase-analysis"
+version = "0.1.0"
+description = "Generic codebase analyzer using LangChain LCEL + LLM"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "langchain>=0.3",
+    "langchain-anthropic>=1.1.0",
+    "langchain-openai",
+    "langchain-google-genai",
+    "pydantic>=2",
+    "click",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
