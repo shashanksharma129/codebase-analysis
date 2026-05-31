@@ -67,12 +67,17 @@ def analyze(
     llm = create_llm(provider, model)
     cache = None if no_cache else DiskCache()
 
+    # must mirror default-resolution logic in llm_factory.py
     resolved_provider = provider or os.environ.get("LLM_PROVIDER", "anthropic")
     with tracer.start_as_current_span(
         "analyze_repo",
         attributes={"repo": str(source), "provider": resolved_provider},
     ) as span:
         try:
+            logger.info(
+                "analyze starting",
+                extra={"source": str(source), "provider": resolved_provider, "ext": ext},
+            )
             t0 = time.monotonic()
             result = asyncio.run(run_pipeline(source, llm, cache, ext))
             duration_ms = round((time.monotonic() - t0) * 1000)
