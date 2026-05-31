@@ -110,6 +110,7 @@ class TestSetupTelemetry:
             obs.setup_telemetry()
             assert len(root.handlers) == count_after_first
         finally:
+            trace.get_tracer_provider().shutdown()
             for h in root.handlers[len(handlers_snapshot):]:
                 root.removeHandler(h)
             trace.set_tracer_provider(original_provider)
