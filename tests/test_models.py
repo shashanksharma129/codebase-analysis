@@ -6,6 +6,7 @@ from src.models import (
     FinalOutput,
     MethodInfo,
     ProjectInfo,
+    ProjectReport,
     ProjectSummary,
 )
 
@@ -107,3 +108,20 @@ def test_final_output_structure():
     )
     out = FinalOutput(project=info, domains=[DomainAnalysis(**_domain())], summary=summary)
     assert len(out.domains) == 1
+
+
+def test_project_report_valid():
+    info = ProjectInfo(
+        name="test", overview="o", purpose="p", tech_stack=[], architecture_pattern="MVC"
+    )
+    summary = ProjectSummary(
+        total_files=1,
+        total_domains=1,
+        total_methods=0,
+        overall_complexity="low",
+        key_patterns=[],
+        notable_aspects=[],
+    )
+    report = ProjectReport(project=info, summary=summary)
+    assert report.project.name == "test"
+    assert report.summary.total_files == 1
