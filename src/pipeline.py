@@ -11,13 +11,15 @@ from src.prompts import AGGREGATION_PROMPT, EXTRACTION_PROMPT
 _MAX_CHARS_PER_DOMAIN = 80_000
 
 
-def _read_domain(files: list[Path]) -> str:
+def _read_domain(files: list[Path]) -> tuple[str, list[str]]:
     parts: list[str] = []
+    skipped: list[str] = []
     total = 0
     for f in sorted(files):
         try:
             content = f.read_text(errors="ignore")
         except OSError:
+            skipped.append(str(f))
             continue
         header = f"// {f.name}\n"
         chunk_size = len(header) + len(content)
@@ -28,7 +30,7 @@ def _read_domain(files: list[Path]) -> str:
             break
         parts.append(f"{header}{content}")
         total += chunk_size
-    return "\n\n".join(parts)
+    return "\n\n".join(parts), skipped
 
 
 async def _analyze_domain(
@@ -36,23 +38,24 @@ async def _analyze_domain(
     files: list[Path],
     llm: BaseChatModel,
     cache: DiskCache | None,
-) -> DomainAnalysis:
+) -> tuple[DomainAnalysis, list[str]]:
     if cache:
         cached = cache.get(files)
         if cached:
-            return cached
+            return cached, []
 
+    source, skipped = _read_domain(files)
     chain = EXTRACTION_PROMPT | llm.with_structured_output(DomainAnalysis, method="json_schema")
     result: DomainAnalysis = await chain.ainvoke({
         "domain_name": domain,
         "file_count": len(files),
-        "source_code": _read_domain(files),
+        "source_code": source,
     })
 
     if cache:
         cache.set(files, result)
 
-    return result
+    return result, skipped
 
 
 async def _run_aggregation(
@@ -94,7 +97,9 @@ async def run_pipeline(
         _analyze_domain(name, files, llm, cache)
         for name, files in domains.items()
     ]
-    domain_results: list[DomainAnalysis] = list(await asyncio.gather(*tasks))
+    domain_tuples: list[tuple[DomainAnalysis, list[str]]] = list(await asyncio.gather(*tasks))
+    domain_results = [d for d, _ in domain_tuples]
+    all_skipped = [p for _, skipped in domain_tuples for p in skipped]
 
     report = await _run_aggregation(domain_results, llm)
 
@@ -108,6 +113,6 @@ async def run_pipeline(
             overall_complexity=report.summary.overall_complexity,
             key_patterns=report.summary.key_patterns,
             notable_aspects=report.summary.notable_aspects,
-            skipped_files=report.summary.skipped_files,
+            skipped_files=all_skipped,
         ),
     )
