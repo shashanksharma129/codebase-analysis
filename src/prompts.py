@@ -12,7 +12,7 @@ For every public method, extract:
 - signature: the full method signature
 - description: one sentence describing what it does
 - http_method: GET, POST, PUT, DELETE, or PATCH if it is a REST endpoint, otherwise null
-- endpoint: the URL path if it is a REST endpoint (e.g. /api/v1/actors/{id}), otherwise null
+- endpoint: the URL path if it is a REST endpoint (e.g. /api/v1/actors/{{id}}), otherwise null
 - complexity: low (simple CRUD, no branching), medium (some logic, joins, transformations), \
 high (complex algorithms, many branches, cross-domain calls)
 
