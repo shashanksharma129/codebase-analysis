@@ -14,7 +14,7 @@ class PythonAnalyzer(LanguageAnalyzer):
         return ".py"
 
     def get_domain_map(self, source: Path) -> dict[str, list[Path]]:
-        raise NotImplementedError
+        ...
 
     async def analyze_domain(
         self,
@@ -23,7 +23,7 @@ class PythonAnalyzer(LanguageAnalyzer):
         llm: BaseChatModel,
         cache: DiskCache | None,
     ) -> tuple[DomainAnalysis, list[str]]:
-        raise NotImplementedError
+        ...
 
     def get_aggregation_prompt(self) -> ChatPromptTemplate:
-        raise NotImplementedError
+        ...
