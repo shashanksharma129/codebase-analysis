@@ -177,12 +177,12 @@ if "result" in st.session_state:
         st.subheader(result.project.name)
         st.markdown(result.project.overview)
         st.caption(result.project.purpose)
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Architecture", result.project.architecture_pattern)
-        c2.metric("Complexity", _COMPLEXITY_BADGE[result.summary.overall_complexity])
-        c3.metric("Files", result.summary.total_files)
-        c4.metric("Domains", result.summary.total_domains)
-        c5.metric("Methods", result.summary.total_methods)
+        st.markdown(f"**Architecture:** {result.project.architecture_pattern}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Complexity", _COMPLEXITY_BADGE[result.summary.overall_complexity])
+        c2.metric("Files", result.summary.total_files)
+        c3.metric("Domains", result.summary.total_domains)
+        c4.metric("Methods", result.summary.total_methods)
         if result.project.tech_stack:
             st.markdown(
                 "**Tech stack:** "
