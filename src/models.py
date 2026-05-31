@@ -48,6 +48,7 @@ class ProjectReport(BaseModel):
 
 
 class FinalOutput(BaseModel):
+    language: str = "java"
     project: ProjectInfo
     domains: list[DomainAnalysis]
     summary: ProjectSummary
