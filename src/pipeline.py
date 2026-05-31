@@ -1,7 +1,11 @@
 import asyncio
+import logging
+import time
 from pathlib import Path
 
 from langchain_core.language_models import BaseChatModel
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 from src.cache import DiskCache
 from src.loader import FileLoader
@@ -9,6 +13,9 @@ from src.models import DomainAnalysis, FinalOutput, ProjectReport, ProjectSummar
 from src.prompts import AGGREGATION_PROMPT, EXTRACTION_PROMPT
 
 _MAX_CHARS_PER_DOMAIN = 80_000
+
+logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 def _read_domain(files: list[Path]) -> tuple[str, list[str]]:
@@ -20,6 +27,7 @@ def _read_domain(files: list[Path]) -> tuple[str, list[str]]:
             content = f.read_text(errors="ignore")
         except OSError:
             skipped.append(str(f))
+            logger.warning("Skipped unreadable file", extra={"path": str(f)})
             continue
         header = f"// {f.name}\n"
         chunk_size = len(header) + len(content)
@@ -39,34 +47,94 @@ async def _analyze_domain(
     llm: BaseChatModel,
     cache: DiskCache | None,
 ) -> tuple[DomainAnalysis, list[str]]:
-    if cache:
-        cached = cache.get(files)
-        if cached:
-            return cached, []
+    with tracer.start_as_current_span(
+        "analyze_domain",
+        attributes={"domain": domain, "file_count": len(files)},
+    ) as span:
+        try:
+            t0 = time.monotonic()
+            logger.info(
+                "Domain analysis started",
+                extra={"domain": domain, "file_count": len(files)},
+            )
 
-    source, skipped = _read_domain(files)
-    chain = EXTRACTION_PROMPT | llm.with_structured_output(DomainAnalysis, method="json_schema")
-    result: DomainAnalysis = await chain.ainvoke({
-        "domain_name": domain,
-        "file_count": len(files),
-        "source_code": source,
-    })
+            if cache:
+                cached = cache.get(files)
+                if cached:
+                    span.set_attribute("cache_hit", True)
+                    span.set_attribute("complexity", cached.complexity)
+                    logger.info(
+                        "Domain analysis complete",
+                        extra={
+                            "domain": domain,
+                            "duration_ms": round((time.monotonic() - t0) * 1000),
+                            "complexity": cached.complexity,
+                        },
+                    )
+                    return cached, []
 
-    if cache:
-        cache.set(files, result)
+            span.set_attribute("cache_hit", False)
+            source, skipped = _read_domain(files)
+            chain = EXTRACTION_PROMPT | llm.with_structured_output(
+                DomainAnalysis, method="json_schema"
+            )
+            result: DomainAnalysis = await chain.ainvoke({
+                "domain_name": domain,
+                "file_count": len(files),
+                "source_code": source,
+            })
 
-    return result, skipped
+            if cache:
+                cache.set(files, result)
+
+            span.set_attribute("complexity", result.complexity)
+            logger.info(
+                "Domain analysis complete",
+                extra={
+                    "domain": domain,
+                    "duration_ms": round((time.monotonic() - t0) * 1000),
+                    "complexity": result.complexity,
+                },
+            )
+            return result, skipped
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(StatusCode.ERROR)
+            raise
 
 
 async def _run_aggregation(
     domain_results: list[DomainAnalysis],
     llm: BaseChatModel,
 ) -> ProjectReport:
-    summaries = "\n\n".join(
-        f"=== {d.name} ===\n{d.model_dump_json(indent=2)}" for d in domain_results
-    )
-    chain = AGGREGATION_PROMPT | llm.with_structured_output(ProjectReport, method="json_schema")
-    return await chain.ainvoke({"domain_summaries": summaries})
+    with tracer.start_as_current_span(
+        "run_aggregation",
+        attributes={"domain_count": len(domain_results)},
+    ) as span:
+        try:
+            summaries = "\n\n".join(
+                f"=== {d.name} ===\n{d.model_dump_json(indent=2)}" for d in domain_results
+            )
+            chain = AGGREGATION_PROMPT | llm.with_structured_output(
+                ProjectReport, method="json_schema"
+            )
+            result = await chain.ainvoke({"domain_summaries": summaries})
+            total_methods = sum(len(d.methods) for d in domain_results)
+            span.set_attribute("total_methods", total_methods)
+            span.set_attribute("overall_complexity", result.summary.overall_complexity)
+            logger.info(
+                "Aggregation complete",
+                extra={
+                    "domain_count": len(domain_results),
+                    "total_methods": total_methods,
+                    "overall_complexity": result.summary.overall_complexity,
+                },
+            )
+            return result
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(StatusCode.ERROR)
+            raise
 
 
 async def run_pipeline(
@@ -75,44 +143,55 @@ async def run_pipeline(
     cache: DiskCache | None,
     ext: str = ".java",
 ) -> FinalOutput:
-    loader = FileLoader(source, ext=ext)
-    domains = loader.load()
+    with tracer.start_as_current_span("run_pipeline") as span:
+        try:
+            loader = FileLoader(source, ext=ext)
+            domains = loader.load()
 
-    if not domains:
-        report = await _run_aggregation([], llm)
-        return FinalOutput(
-            project=report.project,
-            domains=[],
-            summary=ProjectSummary(
-                total_files=0,
-                total_domains=0,
-                total_methods=0,
-                overall_complexity=report.summary.overall_complexity,
-                key_patterns=report.summary.key_patterns,
-                notable_aspects=report.summary.notable_aspects,
-            ),
-        )
+            span.set_attribute("domain_count", len(domains))
+            span.set_attribute("total_files", sum(len(f) for f in domains.values()))
+            span.set_attribute("ext", ext)
 
-    tasks = [
-        _analyze_domain(name, files, llm, cache)
-        for name, files in domains.items()
-    ]
-    domain_tuples: list[tuple[DomainAnalysis, list[str]]] = list(await asyncio.gather(*tasks))
-    domain_results = [d for d, _ in domain_tuples]
-    all_skipped = [p for _, skipped in domain_tuples for p in skipped]
+            if not domains:
+                report = await _run_aggregation([], llm)
+                return FinalOutput(
+                    project=report.project,
+                    domains=[],
+                    summary=ProjectSummary(
+                        total_files=0,
+                        total_domains=0,
+                        total_methods=0,
+                        overall_complexity=report.summary.overall_complexity,
+                        key_patterns=report.summary.key_patterns,
+                        notable_aspects=report.summary.notable_aspects,
+                    ),
+                )
 
-    report = await _run_aggregation(domain_results, llm)
+            tasks = [
+                _analyze_domain(name, files, llm, cache)
+                for name, files in domains.items()
+            ]
+            gathered = await asyncio.gather(*tasks)
+            domain_tuples: list[tuple[DomainAnalysis, list[str]]] = list(gathered)
+            domain_results = [d for d, _ in domain_tuples]
+            all_skipped = [p for _, skipped in domain_tuples for p in skipped]
 
-    return FinalOutput(
-        project=report.project,
-        domains=domain_results,
-        summary=ProjectSummary(
-            total_files=sum(len(files) for files in domains.values()),
-            total_domains=len(domain_results),
-            total_methods=sum(len(d.methods) for d in domain_results),
-            overall_complexity=report.summary.overall_complexity,
-            key_patterns=report.summary.key_patterns,
-            notable_aspects=report.summary.notable_aspects,
-            skipped_files=all_skipped,
-        ),
-    )
+            report = await _run_aggregation(domain_results, llm)
+
+            return FinalOutput(
+                project=report.project,
+                domains=domain_results,
+                summary=ProjectSummary(
+                    total_files=sum(len(files) for files in domains.values()),
+                    total_domains=len(domain_results),
+                    total_methods=sum(len(d.methods) for d in domain_results),
+                    overall_complexity=report.summary.overall_complexity,
+                    key_patterns=report.summary.key_patterns,
+                    notable_aspects=report.summary.notable_aspects,
+                    skipped_files=all_skipped,
+                ),
+            )
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(StatusCode.ERROR)
+            raise

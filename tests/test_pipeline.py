@@ -3,6 +3,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from src.models import (
     DomainAnalysis,
@@ -134,3 +137,27 @@ async def test_run_pipeline_collects_skipped_files(tmp_path):
         result = await run_pipeline(tmp_path, MagicMock(), cache=None)
 
     assert result.summary.skipped_files == ["/missing/Bar.java"]
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_creates_run_pipeline_span(tmp_path):
+    in_memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(in_memory))
+
+    f = tmp_path / "src/main/java/services/catalog/Foo.java"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("class Foo {}")
+
+    with (
+        patch("src.pipeline.tracer", provider.get_tracer("src.pipeline")),
+        patch(
+            "src.pipeline._analyze_domain",
+            new=AsyncMock(return_value=(_make_domain("catalog"), [])),
+        ),
+        patch("src.pipeline._run_aggregation", new=AsyncMock(return_value=_make_report())),
+    ):
+        await run_pipeline(tmp_path, MagicMock(), cache=None)
+
+    span_names = [s.name for s in in_memory.get_finished_spans()]
+    assert "run_pipeline" in span_names
