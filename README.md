@@ -33,6 +33,20 @@ uv sync
 uv run python main.py --source ./spring-rest-sakila-main --output report.json
 ```
 
+## Web UI
+
+A browser-based interface that accepts a public GitHub repository URL and displays results in two tabs — a human-readable summary and a raw JSON viewer with download.
+
+```bash
+cp .env.example .env        # fill in LLM_PROVIDER and matching API key
+uv sync
+streamlit run ui.py
+```
+
+Open `http://localhost:8501` in your browser, paste a GitHub URL (e.g. `https://github.com/codejsha/spring-rest-sakila`), and click **Analyze**.
+
+> **Note:** Only public repositories are supported (no authentication).
+
 ## CLI Options
 
 | Option | Default | Description |
