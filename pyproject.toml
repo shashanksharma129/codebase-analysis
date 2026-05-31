@@ -11,6 +11,10 @@ dependencies = [
     "langchain-google-genai",
     "pydantic>=2",
     "click",
+    "tenacity",
+    "streamlit",
+    "python-dotenv",
+    "requests",
 ]
 
 [dependency-groups]
