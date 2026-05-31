@@ -6,6 +6,7 @@ def _normalize(name: str) -> str:
 
 
 def method_recall(expected_names: list[str], found_names: list[str]) -> float:
+    # Duplicate names are deduplicated via set conversion; overloaded methods count once.
     if not expected_names:
         return 1.0
     exp = {_normalize(n) for n in expected_names}
