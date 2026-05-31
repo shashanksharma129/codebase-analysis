@@ -1,8 +1,11 @@
+import logging
 import os
 
 import click
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
+
+logger = logging.getLogger(__name__)
 
 _PROVIDER_API_KEYS: dict[str, str] = {
     "anthropic": "ANTHROPIC_API_KEY",
@@ -28,4 +31,6 @@ def create_llm(provider: str | None = None, model: str | None = None) -> BaseCha
             f"Set it in your shell or copy .env.example to .env and fill it in."
         )
 
-    return init_chat_model(f"{provider}:{model}", max_retries=3, temperature=0)
+    llm = init_chat_model(f"{provider}:{model}", max_retries=3, temperature=0)
+    logger.info("LLM initialized", extra={"provider": provider, "model": model})
+    return llm

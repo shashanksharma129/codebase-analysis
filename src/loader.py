@@ -1,4 +1,7 @@
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 _DOMAIN_MARKERS = frozenset(
     {"services", "modules", "features", "domain", "domains", "packages"}
@@ -19,10 +22,15 @@ class FileLoader:
         for path in sorted(self.source.rglob(f"*{self.ext}")):
             domain = self._domain_for(path)
             domains.setdefault(domain, []).append(path)
+        total_files = sum(len(v) for v in domains.values())
+        logger.info(
+            "Domains discovered",
+            extra={"domain_count": len(domains), "total_files": total_files},
+        )
         return domains
 
     def _domain_for(self, path: Path) -> str:
-        parts = path.relative_to(self.source).parts[:-1]  # exclude filename
+        parts = path.relative_to(self.source).parts[:-1]
         for i, part in enumerate(parts):
             if part in _DOMAIN_MARKERS and i + 1 < len(parts):
                 return parts[i + 1]
