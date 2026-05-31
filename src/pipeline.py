@@ -99,7 +99,7 @@ async def _analyze_domain(
             return result, skipped
         except Exception as exc:
             span.record_exception(exc)
-            span.set_status(StatusCode.ERROR)
+            span.set_status(StatusCode.ERROR, description=str(exc))
             raise
 
 
@@ -133,7 +133,7 @@ async def _run_aggregation(
             return result
         except Exception as exc:
             span.record_exception(exc)
-            span.set_status(StatusCode.ERROR)
+            span.set_status(StatusCode.ERROR, description=str(exc))
             raise
 
 
@@ -193,5 +193,5 @@ async def run_pipeline(
             )
         except Exception as exc:
             span.record_exception(exc)
-            span.set_status(StatusCode.ERROR)
+            span.set_status(StatusCode.ERROR, description=str(exc))
             raise

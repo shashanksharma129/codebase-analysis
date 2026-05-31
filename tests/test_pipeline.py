@@ -6,6 +6,7 @@ import pytest
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 
 from src.models import (
     DomainAnalysis,
@@ -161,3 +162,6 @@ async def test_run_pipeline_creates_run_pipeline_span(tmp_path):
 
     span_names = [s.name for s in in_memory.get_finished_spans()]
     assert "run_pipeline" in span_names
+    run_pipeline_span = next(s for s in in_memory.get_finished_spans() if s.name == "run_pipeline")
+    assert run_pipeline_span.attributes["domain_count"] == 1
+    assert run_pipeline_span.status.status_code != StatusCode.ERROR
