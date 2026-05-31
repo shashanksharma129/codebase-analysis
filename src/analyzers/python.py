@@ -34,7 +34,7 @@ For every method (identified by its signature and decorators):
 - signature: the full signature including type hints, e.g. "async def get_user(user_id: int) -> UserResponse"
 - description: one sentence describing what it does
 - http_method: GET/POST/PUT/DELETE/PATCH if it is a route handler (check @router.X / @app.X decorators), otherwise null
-- endpoint: the URL path from the decorator, e.g. "/users/{user_id}", otherwise null
+- endpoint: the URL path from the decorator, e.g. "/users/{{user_id}}", otherwise null
 - complexity: low (simple CRUD, no branching), medium (some logic), high (complex, cross-domain)
 
 Also set domain complexity and notable_aspects (design patterns, async usage, dependency injection)."""),

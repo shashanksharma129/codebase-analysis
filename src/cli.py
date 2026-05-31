@@ -68,7 +68,8 @@ def analyze(
     setup_telemetry()
     llm = create_llm(provider, model)
     cache = None if no_cache else DiskCache()
-    analyzer = get_analyzer("." + language)
+    _ext_map = {"java": ".java", "python": ".py"}
+    analyzer = get_analyzer(_ext_map[language])
 
     # must mirror default-resolution logic in llm_factory.py
     resolved_provider = provider or os.environ.get("LLM_PROVIDER", "anthropic")
