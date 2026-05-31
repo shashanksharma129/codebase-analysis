@@ -8,6 +8,7 @@ import click
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
+from src.analyzers import get_analyzer
 from src.cache import DiskCache
 from src.llm_factory import create_llm
 from src.observability import setup_telemetry
@@ -49,10 +50,11 @@ tracer = trace.get_tracer(__name__)
     help="Disable disk cache.",
 )
 @click.option(
-    "--ext",
-    default=".java",
+    "--language",
+    default="java",
+    type=click.Choice(["java", "python"]),
     show_default=True,
-    help="File extension filter.",
+    help="Language of the codebase to analyze.",
 )
 def analyze(
     source: Path,
@@ -60,26 +62,27 @@ def analyze(
     provider: str | None,
     model: str | None,
     no_cache: bool,
-    ext: str,
+    language: str,
 ) -> None:
     """Analyze a codebase and extract structured knowledge to JSON."""
     setup_telemetry()
     llm = create_llm(provider, model)
     cache = None if no_cache else DiskCache()
+    analyzer = get_analyzer("." + language)
 
     # must mirror default-resolution logic in llm_factory.py
     resolved_provider = provider or os.environ.get("LLM_PROVIDER", "anthropic")
     with tracer.start_as_current_span(
         "analyze_repo",
-        attributes={"repo": str(source), "provider": resolved_provider},
+        attributes={"repo": str(source), "provider": resolved_provider, "language": language},
     ) as span:
         try:
             logger.info(
                 "analyze starting",
-                extra={"source": str(source), "provider": resolved_provider, "ext": ext},
+                extra={"source": str(source), "provider": resolved_provider, "language": language},
             )
             t0 = time.monotonic()
-            result = asyncio.run(run_pipeline(source, llm, cache, ext))
+            result = asyncio.run(run_pipeline(source, llm, cache, analyzer))
             duration_ms = round((time.monotonic() - t0) * 1000)
 
             output.parent.mkdir(parents=True, exist_ok=True)
