@@ -1,11 +1,20 @@
 import asyncio
+import logging
+import os
+import time
 from pathlib import Path
 
 import click
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 from src.cache import DiskCache
 from src.llm_factory import create_llm
+from src.observability import setup_telemetry
 from src.pipeline import run_pipeline
+
+logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @click.command()
@@ -54,12 +63,27 @@ def analyze(
     ext: str,
 ) -> None:
     """Analyze a codebase and extract structured knowledge to JSON."""
+    setup_telemetry()
     llm = create_llm(provider, model)
     cache = None if no_cache else DiskCache()
 
-    click.echo(f"Analyzing {source} ...")
-    result = asyncio.run(run_pipeline(source, llm, cache, ext))
+    resolved_provider = provider or os.environ.get("LLM_PROVIDER", "anthropic")
+    with tracer.start_as_current_span(
+        "analyze_repo",
+        attributes={"repo": str(source), "provider": resolved_provider},
+    ) as span:
+        try:
+            t0 = time.monotonic()
+            result = asyncio.run(run_pipeline(source, llm, cache, ext))
+            duration_ms = round((time.monotonic() - t0) * 1000)
 
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(result.model_dump_json(indent=2, by_alias=True))
-    click.echo(f"Done. Report written to {output}")
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(result.model_dump_json(indent=2, by_alias=True))
+            logger.info(
+                "Analysis complete",
+                extra={"output_path": str(output), "duration_ms": duration_ms},
+            )
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(StatusCode.ERROR, description=str(exc))
+            raise
