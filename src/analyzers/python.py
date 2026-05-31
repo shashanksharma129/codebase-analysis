@@ -138,6 +138,7 @@ def _validate(state: DomainAnalysisState) -> DomainAnalysisState:
 
 
 def _should_retry(state: DomainAnalysisState) -> str:
+    """Route to 'retry' (back to llm_analyze) if validation failed and attempts remain, else 'done'."""
     if state["validation_errors"] and state["retry_count"] < 2:
         return "retry"
     if state["validation_errors"]:
