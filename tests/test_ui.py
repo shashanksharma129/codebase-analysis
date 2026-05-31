@@ -1,6 +1,8 @@
 # tests/test_ui.py
 import pytest
 
+from src.models import DomainAnalysis, MethodInfo
+from src.ui_helpers import _collect_endpoints
 from ui import parse_github_url
 
 
@@ -40,10 +42,6 @@ def test_parse_invalid_url_wrong_host():
 def test_parse_invalid_url_not_a_url():
     with pytest.raises(ValueError):
         parse_github_url("not-a-url")
-
-
-from src.models import DomainAnalysis, MethodInfo
-from src.ui_helpers import _collect_endpoints
 
 
 def _make_method(
