@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
+from src.analyzers import get_analyzer
 from src.cache import DiskCache
 from src.llm_factory import create_llm
 from src.observability import setup_telemetry
@@ -80,6 +81,9 @@ with col_url:
 with col_branch:
     branch_input = st.text_input("Branch", value="main")
 
+lang = st.selectbox("Language", ["Java", "Python"], index=0)
+analyzer = get_analyzer("." + lang.lower())
+
 analyze_clicked = st.button("Analyze", type="primary", disabled=not url.strip())
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
@@ -108,7 +112,7 @@ if analyze_clicked and url.strip():
                     source, zip_bytes = _download_and_extract(owner, repo, branch, Path(tmp))
                     dl_span.set_attribute("zip_bytes", zip_bytes)
                 status.update(label="Analyzing repository...")
-                result = asyncio.run(run_pipeline(source, _llm, _cache))
+                result = asyncio.run(run_pipeline(source, _llm, _cache, analyzer))
                 status.update(label="Done.", state="complete")
             span.set_status(StatusCode.OK)
         except RuntimeError as e:
@@ -172,7 +176,7 @@ if analyze_clicked and url.strip():
                         )
             else:
                 st.info(
-                    "No domains found — no Java files detected in this repository."
+                    f"No {lang.lower()} files detected in this repository."
                 )
 
         with tab_json:
