@@ -16,11 +16,11 @@ from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from src.analyzers import get_analyzer
-from src.ui_helpers import _collect_endpoints
 from src.cache import DiskCache
 from src.llm_factory import create_llm
 from src.observability import setup_telemetry
 from src.pipeline import run_pipeline
+from src.ui_helpers import _collect_endpoints
 
 load_dotenv()
 setup_telemetry()
@@ -278,5 +278,6 @@ if "result" in st.session_state:
             data=result.model_dump_json(indent=2, by_alias=True),
             file_name=f"{repo}-report.json",
             mime="application/json",
+            key="download_report",
         )
         st.json(result.model_dump(by_alias=True))
