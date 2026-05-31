@@ -81,8 +81,9 @@ with col_url:
 with col_branch:
     branch_input = st.text_input("Branch", value="main")
 
-lang = st.selectbox("Language", ["Java", "Python"], index=0)
-analyzer = get_analyzer("." + lang.lower())
+_LANG_EXT = {"Java": ".java", "Python": ".py"}
+lang = st.selectbox("Language", list(_LANG_EXT), index=0)
+analyzer = get_analyzer(_LANG_EXT[lang])
 
 analyze_clicked = st.button("Analyze", type="primary", disabled=not url.strip())
 
