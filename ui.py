@@ -1,5 +1,6 @@
 import asyncio
 import io
+import logging
 import os
 import re
 import shutil
@@ -11,14 +12,21 @@ import click
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 from src.cache import DiskCache
 from src.llm_factory import create_llm
+from src.observability import setup_telemetry
 from src.pipeline import run_pipeline
 
 load_dotenv()
+setup_telemetry()
 
 st.set_page_config(page_title="Codebase Analyzer", layout="wide")
+
+logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 _GITHUB_RE = re.compile(
     r"https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?(?:/tree/([^/]+))?/?$"
@@ -35,14 +43,15 @@ def parse_github_url(url: str) -> tuple[str, str, str]:
     return owner, repo, branch
 
 
-def _download_and_extract(owner: str, repo: str, branch: str, dest: Path) -> Path:
+def _download_and_extract(owner: str, repo: str, branch: str, dest: Path) -> tuple[Path, int]:
     zip_url = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
     resp = requests.get(zip_url, timeout=60)
     if resp.status_code != 200:
         raise RuntimeError(f"Failed to download repository: HTTP {resp.status_code}")
+    zip_bytes = len(resp.content)
     with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
         zf.extractall(dest)
-    return next(dest.iterdir())
+    return next(dest.iterdir()), zip_bytes
 
 
 # LLM + cache initialised once at startup
@@ -55,6 +64,7 @@ except click.ClickException as e:
 
 # ── Page header ───────────────────────────────────────────────────────────────
 st.title("Codebase Analyzer")
+
 _provider = os.environ.get("LLM_PROVIDER", "anthropic")
 _model = os.environ.get("LLM_MODEL", "")
 st.caption(
@@ -85,20 +95,45 @@ if analyze_clicked and url.strip():
     result = None
     error_msg = None
 
-    try:
-        with st.status("Downloading repository...", expanded=True) as status:
-            source = _download_and_extract(owner, repo, branch, Path(tmp))
-            status.update(label="Analyzing repository...")
-            result = asyncio.run(run_pipeline(source, _llm, _cache))
-            status.update(label="Done.", state="complete")
-    except RuntimeError as e:
-        error_msg = str(e)
-    except requests.RequestException as e:
-        error_msg = f"Network error: {e}"
-    except Exception as e:
-        error_msg = f"Analysis failed: {e}"
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    with tracer.start_as_current_span(
+        "analyze_repo",
+        attributes={"repo": repo, "branch": branch, "provider": _provider},
+    ) as span:
+        try:
+            with st.status("Downloading repository...", expanded=True) as status:
+                with tracer.start_as_current_span(
+                    "download_zip",
+                    attributes={"repo": repo, "branch": branch},
+                ) as dl_span:
+                    source, zip_bytes = _download_and_extract(owner, repo, branch, Path(tmp))
+                    dl_span.set_attribute("zip_bytes", zip_bytes)
+                status.update(label="Analyzing repository...")
+                result = asyncio.run(run_pipeline(source, _llm, _cache))
+                status.update(label="Done.", state="complete")
+            span.set_status(StatusCode.OK)
+        except RuntimeError as e:
+            error_msg = str(e)
+            logger.error(
+                "Download failed",
+                extra={"repo": repo, "branch": branch, "error": str(e)},
+            )
+            span.record_exception(e)
+            span.set_status(StatusCode.ERROR, description=str(e))
+        except requests.RequestException as e:
+            error_msg = f"Network error: {e}"
+            logger.error(
+                "Download failed",
+                extra={"repo": repo, "branch": branch, "error": str(e)},
+            )
+            span.record_exception(e)
+            span.set_status(StatusCode.ERROR, description=str(e))
+        except Exception as e:
+            error_msg = f"Analysis failed: {e}"
+            logger.error("Analysis failed", extra={"repo": repo, "error": str(e)})
+            span.record_exception(e)
+            span.set_status(StatusCode.ERROR, description=str(e))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     if error_msg:
         st.error(error_msg)
