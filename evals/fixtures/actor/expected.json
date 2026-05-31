@@ -1,0 +1,240 @@
+{
+  "name": "actor",
+  "description": "Actor management service with HATEOAS support, caching, and role-based security.",
+  "file_count": 2,
+  "complexity": "medium",
+  "methods": [
+    {
+      "class": "ActorController",
+      "method_name": "getActorList",
+      "signature": "public ResponseEntity<CollectionModel<ActorDto.ActorResponse>> getActorList(Pageable pageable)",
+      "description": "Retrieves a paginated list of actors.",
+      "http_method": "GET",
+      "endpoint": "/actors",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "addActor",
+      "signature": "public ResponseEntity<Void> addActor(ActorDto.ActorRequest model)",
+      "description": "Creates a new actor and returns its URI.",
+      "http_method": "POST",
+      "endpoint": "/actors",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "getActor",
+      "signature": "public ResponseEntity<ActorDto.ActorResponse> getActor(Integer actorId)",
+      "description": "Retrieves a single actor by ID.",
+      "http_method": "GET",
+      "endpoint": "/actors/{actorId}",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "updateActor",
+      "signature": "public ResponseEntity<Void> updateActor(Integer actorId, ActorDto.ActorRequest model)",
+      "description": "Updates an existing actor by ID.",
+      "http_method": "PUT",
+      "endpoint": "/actors/{actorId}",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "deleteActor",
+      "signature": "public ResponseEntity<Void> deleteActor(Integer actorId)",
+      "description": "Deletes an actor by ID.",
+      "http_method": "DELETE",
+      "endpoint": "/actors/{actorId}",
+      "complexity": "low"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "getActorDetails",
+      "signature": "public ResponseEntity<ActorDetailsDto.ActorDetailsResponse> getActorDetails(Integer actorId)",
+      "description": "Retrieves detailed information for a specific actor.",
+      "http_method": "GET",
+      "endpoint": "/actors/{actorId}/details",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "getActorFilmList",
+      "signature": "public ResponseEntity<CollectionModel<FilmDto.FilmResponse>> getActorFilmList(Integer actorId, String category, String releaseYear, String rating, Pageable pageable)",
+      "description": "Retrieves a paginated list of films associated with a specific actor, with optional filters.",
+      "http_method": "GET",
+      "endpoint": "/actors/{actorId}/films",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "addActorFilm",
+      "signature": "public ResponseEntity<Void> addActorFilm(Integer actorId, Map<String, String> input)",
+      "description": "Associates a film with a specific actor.",
+      "http_method": "POST",
+      "endpoint": "/actors/{actorId}/films",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "getActorFilm",
+      "signature": "public ResponseEntity<FilmDto.FilmResponse> getActorFilm(Integer actorId, Integer filmId)",
+      "description": "Retrieves a specific film associated with an actor.",
+      "http_method": "GET",
+      "endpoint": "/actors/{actorId}/films/{filmId}",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "deleteActorFilm",
+      "signature": "public ResponseEntity<Void> deleteActorFilm(Integer actorId, Integer filmId)",
+      "description": "Removes the association between an actor and a film.",
+      "http_method": "DELETE",
+      "endpoint": "/actors/{actorId}/films/{filmId}",
+      "complexity": "low"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "getActorFilmDetails",
+      "signature": "public ResponseEntity<FilmDetailsDto.FilmDetailsResponse> getActorFilmDetails(Integer actorId, Integer filmId)",
+      "description": "Retrieves detailed information for a specific film associated with an actor.",
+      "http_method": "GET",
+      "endpoint": "/actors/{actorId}/films/{filmId}/details",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorController",
+      "method_name": "searchActorByName",
+      "signature": "public ResponseEntity<CollectionModel<ActorDto.ActorResponse>> searchActorByName(Map<String, String> input)",
+      "description": "Searches for actors by name.",
+      "http_method": "POST",
+      "endpoint": "/actors/search",
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActorList",
+      "signature": "public List<ActorDto.Actor> getActorList(Pageable pageable)",
+      "description": "Retrieves a list of actors from the repository and maps them to DTOs.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActor",
+      "signature": "public Optional<ActorDto.Actor> getActor(Integer actorId)",
+      "description": "Retrieves a single actor by ID with caching support.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActorDetailsList",
+      "signature": "public List<ActorDetailsDto.ActorDetails> getActorDetailsList()",
+      "description": "Retrieves detailed information for all actors.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActorDetails",
+      "signature": "public Optional<ActorDetailsDto.ActorDetails> getActorDetails(Integer actorId)",
+      "description": "Retrieves detailed information for a specific actor by ID.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActorFilmList",
+      "signature": "public List<FilmDto.Film> getActorFilmList(Integer actorId, FilmDto.FilterOption condition, Pageable pageable)",
+      "description": "Retrieves a filtered list of films associated with an actor.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActorFilm",
+      "signature": "public Optional<FilmDto.Film> getActorFilm(Integer actorId, Integer filmId)",
+      "description": "Retrieves a specific film associated with an actor.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "getActorFilmDetails",
+      "signature": "public Optional<FilmDetailsDto.FilmDetails> getActorFilmDetails(Integer actorId, Integer filmId)",
+      "description": "Retrieves detailed information for a specific film associated with an actor.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "searchActorList",
+      "signature": "public List<ActorDto.Actor> searchActorList(String name)",
+      "description": "Searches for actors by first or last name.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "addActor",
+      "signature": "public ActorDto.Actor addActor(ActorDto.ActorRequest model)",
+      "description": "Saves a new actor entity and returns its mapped DTO.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "addActorFilm",
+      "signature": "public FilmDto.Film addActorFilm(Integer actorId, Integer filmId)",
+      "description": "Associates a film with an actor in the repository.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "updateActor",
+      "signature": "public ActorDto.Actor updateActor(Integer actorId, ActorDto.ActorRequest model)",
+      "description": "Updates an existing actor entity and updates the cache.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "deleteActor",
+      "signature": "public void deleteActor(Integer actorId)",
+      "description": "Deletes an actor by ID and evicts them from the cache.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "low"
+    },
+    {
+      "class": "ActorServiceImpl",
+      "method_name": "removeActorFilm",
+      "signature": "public void removeActorFilm(Integer actorId, Integer filmId)",
+      "description": "Removes the association between an actor and a film.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "low"
+    }
+  ],
+  "notable_aspects": [
+    "HATEOAS (Hypermedia as the Engine of Application State) representation models and link building",
+    "Spring Security @Secured annotations for role-based access control",
+    "Spring Cache abstraction (@Cacheable, @CachePut, @CacheEvict) for performance optimization",
+    "Transactional management with read-only optimizations",
+    "DTO mapping using MapStruct or custom mappers"
+  ]
+}
