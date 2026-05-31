@@ -89,9 +89,9 @@ class TestJsonLogSpanExporter:
         span_records = [r for r in caplog.records if r.name == "otel.spans"]
         assert len(span_records) == 1
         r = span_records[0]
-        for field in ("trace_id", "span_id", "name", "duration_ms", "status", "attributes"):
+        for field in ("trace_id", "span_id", "span_name", "duration_ms", "status", "attributes"):
             assert hasattr(r, field), f"missing span field: {field}"
-        assert r.name == "otel.spans"
+        assert r.span_name == "my-span"
         assert getattr(r, "status") == "OK"
         assert getattr(r, "attributes") == {"domain": "catalog"}
 

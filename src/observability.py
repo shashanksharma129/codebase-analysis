@@ -1,4 +1,3 @@
-import atexit
 import json
 import logging
 import sys
@@ -16,7 +15,7 @@ _LOG_RECORD_ATTRS = frozenset({
     "name", "msg", "args", "levelname", "levelno", "pathname", "filename",
     "module", "exc_info", "exc_text", "stack_info", "lineno", "funcName",
     "created", "msecs", "relativeCreated", "thread", "threadName",
-    "processName", "process", "message", "taskName",
+    "processName", "process", "message", "taskName", "asctime",
 })
 
 
@@ -36,7 +35,7 @@ class JsonFormatter(logging.Formatter):
                 payload[key] = value
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
-        return json.dumps(payload)
+        return json.dumps(payload, default=str)
 
 
 class TraceIdFilter(logging.Filter):
@@ -98,8 +97,10 @@ def _configure_logging() -> None:
     handler.addFilter(TraceIdFilter())
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
+    root.setLevel(logging.WARNING)
     root.addHandler(handler)
+    for name in ("src", "ui", "otel.spans"):
+        logging.getLogger(name).setLevel(logging.DEBUG)
 
 
 def _configure_tracing() -> TracerProvider:
@@ -115,6 +116,5 @@ def setup_telemetry() -> None:
     if _telemetry_configured:
         return
     _configure_logging()
-    provider = _configure_tracing()
-    atexit.register(provider.force_flush)
+    _configure_tracing()
     _telemetry_configured = True
