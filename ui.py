@@ -16,6 +16,7 @@ from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from src.analyzers import get_analyzer
+from src.ui_helpers import _collect_endpoints
 from src.cache import DiskCache
 from src.llm_factory import create_llm
 from src.observability import setup_telemetry
@@ -33,6 +34,13 @@ _GITHUB_RE = re.compile(
     r"https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?(?:/tree/([^/]+))?/?$"
 )
 _COMPLEXITY_BADGE = {"low": "🟢 low", "medium": "🟡 medium", "high": "🔴 high"}
+_VERB_COLOR = {
+    "GET":    "#4fc3f7",
+    "POST":   "#81c784",
+    "PUT":    "#ffb74d",
+    "DELETE": "#ef9a9a",
+    "PATCH":  "#fff176",
+}
 
 
 def parse_github_url(url: str) -> tuple[str, str, str]:
@@ -142,49 +150,133 @@ if analyze_clicked and url.strip():
 
     if error_msg:
         st.error(error_msg)
-
     elif result:
-        tab_summary, tab_json = st.tabs(["Summary", "Raw JSON"])
+        st.session_state["result"] = result
+        st.session_state["result_repo"] = repo
+        st.session_state["result_lang"] = lang
+        st.session_state["expanded_domain"] = None
 
-        with tab_summary:
-            st.subheader(result.project.name)
-            st.markdown(result.project.overview)
-            st.caption(result.project.purpose)
+# ── Results ───────────────────────────────────────────────────────────────────
+if "result" in st.session_state:
+    result = st.session_state["result"]
+    repo = st.session_state["result_repo"]
+    lang = st.session_state["result_lang"]
+    if "expanded_domain" not in st.session_state:
+        st.session_state["expanded_domain"] = None
 
-            c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("Architecture", result.project.architecture_pattern)
-            c2.metric("Complexity", _COMPLEXITY_BADGE[result.summary.overall_complexity])
-            c3.metric("Files", result.summary.total_files)
-            c4.metric("Domains", result.summary.total_domains)
-            c5.metric("Methods", result.summary.total_methods)
+    endpoint_rows = _collect_endpoints(result.domains)
+    tab_names = ["Overview", "Domains"]
+    if endpoint_rows:
+        tab_names.append("API Surface")
+    tab_names += ["Insights", "Raw JSON"]
+    tabs = st.tabs(tab_names)
+    tab_idx = {name: i for i, name in enumerate(tab_names)}
 
-            if result.project.tech_stack:
-                st.markdown(
-                    "**Tech stack:** "
-                    + "  ".join(f"`{t}`" for t in result.project.tech_stack)
-                )
+    # ── Overview ──────────────────────────────────────────────────────────────
+    with tabs[tab_idx["Overview"]]:
+        st.subheader(result.project.name)
+        st.markdown(result.project.overview)
+        st.caption(result.project.purpose)
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Architecture", result.project.architecture_pattern)
+        c2.metric("Complexity", _COMPLEXITY_BADGE[result.summary.overall_complexity])
+        c3.metric("Files", result.summary.total_files)
+        c4.metric("Domains", result.summary.total_domains)
+        c5.metric("Methods", result.summary.total_methods)
+        if result.project.tech_stack:
+            st.markdown(
+                "**Tech stack:** "
+                + "  ".join(f"`{t}`" for t in result.project.tech_stack)
+            )
 
-            if result.domains:
-                st.markdown("### Domains")
-                cols = st.columns(3)
-                for i, domain in enumerate(result.domains):
-                    with cols[i % 3]:
+    # ── Domains ───────────────────────────────────────────────────────────────
+    with tabs[tab_idx["Domains"]]:
+        if result.domains:
+            cols = st.columns(3)
+            for i, domain in enumerate(result.domains):
+                with cols[i % 3]:
+                    with st.container(border=True):
                         st.markdown(
-                            f"**{domain.name}** — "
-                            f"{_COMPLEXITY_BADGE[domain.complexity]}\n\n"
+                            f"**{domain.name}** — {_COMPLEXITY_BADGE[domain.complexity]}\n\n"
                             f"{domain.file_count} files · {len(domain.methods)} methods\n\n"
                             f"_{domain.description}_"
                         )
-            else:
-                st.info(
-                    f"No {lang.lower()} files detected in this repository."
-                )
+                        if domain.notable_aspects:
+                            st.markdown(
+                                " ".join(f"`{a}`" for a in domain.notable_aspects)
+                            )
+                        is_expanded = st.session_state["expanded_domain"] == domain.name
+                        label = "▲ Hide methods" if is_expanded else "▼ Show methods"
+                        if st.button(label, key=f"expand_{domain.name}"):
+                            st.session_state["expanded_domain"] = (
+                                None if is_expanded else domain.name
+                            )
+                            st.rerun()
 
-        with tab_json:
-            st.download_button(
-                "Download report.json",
-                data=result.model_dump_json(indent=2, by_alias=True),
-                file_name=f"{repo}-report.json",
-                mime="application/json",
+            expanded = st.session_state["expanded_domain"]
+            if expanded:
+                domain_map = {d.name: d for d in result.domains}
+                d = domain_map[expanded]
+                st.markdown(f"---\n### {d.name} — methods")
+                if not d.methods:
+                    st.info("No methods found in this domain.")
+                else:
+                    for m in d.methods:
+                        with st.container(border=True):
+                            if m.http_method:
+                                color = _VERB_COLOR.get(m.http_method, "#ffffff")
+                                st.markdown(
+                                    f'<span style="color:{color};font-weight:600;">'
+                                    f"{m.http_method}</span> "
+                                    f'<span style="color:{color};">{m.endpoint}</span>',
+                                    unsafe_allow_html=True,
+                                )
+                            else:
+                                st.markdown(
+                                    '<span style="color:#888;">internal</span>',
+                                    unsafe_allow_html=True,
+                                )
+                            st.caption(m.class_name or "")
+                            st.code(m.signature, language="text")
+                            st.write(m.description)
+                            st.markdown(f"Complexity: {_COMPLEXITY_BADGE[m.complexity]}")
+        else:
+            st.info(f"No {lang.lower()} files detected in this repository.")
+
+    # ── API Surface ───────────────────────────────────────────────────────────
+    if endpoint_rows:
+        with tabs[tab_idx["API Surface"]]:
+            domain_count = len({r["Domain"] for r in endpoint_rows})
+            st.caption(
+                f"{len(endpoint_rows)} endpoint{'s' if len(endpoint_rows) != 1 else ''} "
+                f"across {domain_count} domain{'s' if domain_count != 1 else ''}"
             )
-            st.json(result.model_dump(by_alias=True))
+            st.dataframe(endpoint_rows, use_container_width=True)
+
+    # ── Insights ──────────────────────────────────────────────────────────────
+    with tabs[tab_idx["Insights"]]:
+        any_content = False
+        if result.summary.key_patterns:
+            any_content = True
+            st.markdown("### Key Patterns")
+            st.markdown(" ".join(f"`{p}`" for p in result.summary.key_patterns))
+        if result.summary.notable_aspects:
+            any_content = True
+            st.markdown("### Notable Aspects")
+            st.markdown("\n".join(f"- {a}" for a in result.summary.notable_aspects))
+        if result.summary.skipped_files:
+            any_content = True
+            with st.expander(f"Skipped files ({len(result.summary.skipped_files)})"):
+                st.code("\n".join(result.summary.skipped_files))
+        if not any_content:
+            st.info("No insights available.")
+
+    # ── Raw JSON ──────────────────────────────────────────────────────────────
+    with tabs[tab_idx["Raw JSON"]]:
+        st.download_button(
+            "Download report.json",
+            data=result.model_dump_json(indent=2, by_alias=True),
+            file_name=f"{repo}-report.json",
+            mime="application/json",
+        )
+        st.json(result.model_dump(by_alias=True))
