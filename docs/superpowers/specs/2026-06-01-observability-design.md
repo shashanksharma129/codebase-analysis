@@ -234,7 +234,7 @@ The two existing `click.echo()` calls are replaced with `logger.info()`.
 
 ### src/pipeline.py
 
-`run_pipeline`, `_analyze_domain`, and `_run_aggregation` each open a span with `tracer.start_as_current_span(...)`. OTel's context propagation automatically threads the trace context through `asyncio.gather` — child spans in concurrent domain tasks correctly reference the parent `run_pipeline` span.
+`run_pipeline`, `_analyze_domain`, and `_run_aggregation` each open a span with `tracer.start_as_current_span(...)`. OTel's Python SDK propagates context through asyncio via `contextvars` — each coroutine dispatched by `asyncio.gather` inherits a copy of the parent context, so concurrent `analyze_domain` spans correctly reference the parent `run_pipeline` span without any manual context passing.
 
 ---
 
