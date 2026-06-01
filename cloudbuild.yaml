@@ -1,0 +1,62 @@
+steps:
+  # Run unit tests
+  - name: "python:3.13-slim"
+    id: test
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install uv -q
+        uv sync --frozen
+        uv run python -m pytest -q
+
+  # Build Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    id: build
+    args:
+      - build
+      - -t
+      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:latest
+      - .
+    waitFor: [test]
+
+  # Push to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    id: push
+    args:
+      - push
+      - --all-tags
+      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui
+    waitFor: [build]
+
+  # Deploy to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - codebase-analyzer
+      - --image=us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:$COMMIT_SHA
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --service-account=codebase-analyzer-sa@codebase-analysis.iam.gserviceaccount.com
+      - --update-secrets=GOOGLE_API_KEY=google-api-key:latest
+      - --set-env-vars=LLM_PROVIDER=google_genai,LLM_MODEL=gemini-3.5-flash,GCS_CACHE_BUCKET=codebase-analysis-cache
+      - --memory=2Gi
+      - --cpu=2
+      - --timeout=300
+      - --min-instances=0
+      - --max-instances=5
+      - --port=8501
+    waitFor: [push]
+
+images:
+  - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:$COMMIT_SHA
+  - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
