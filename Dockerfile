@@ -12,8 +12,6 @@ COPY --from=builder /app/.venv .venv
 COPY src/ src/
 COPY ui.py .
 ENV PATH="/app/.venv/bin:$PATH"
-EXPOSE 8501
-ENTRYPOINT ["streamlit", "run", "ui.py", \
-  "--server.port=8501", \
-  "--server.address=0.0.0.0", \
-  "--server.headless=true"]
+RUN adduser --disabled-password --gecos "" appuser
+USER appuser
+ENTRYPOINT ["sh", "-c", "streamlit run ui.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.headless=true"]
