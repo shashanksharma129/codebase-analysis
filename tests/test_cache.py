@@ -1,6 +1,8 @@
 # tests/test_cache.py
 
-from src.cache import DiskCache
+from unittest.mock import MagicMock, patch
+
+from src.cache import DiskCache, GcsCache, create_cache
 from src.models import DomainAnalysis
 
 
@@ -69,13 +71,9 @@ def test_multiple_domains_independent(tmp_path):
     assert cache.get([f2]) == _domain("beta")
 
 
-from unittest.mock import MagicMock, patch
-from src.cache import GcsCache, create_cache
-
-
 def _make_gcs_cache(bucket_mock):
-    with patch("google.cloud.storage.Client") as mock_client:
-        mock_client.return_value.bucket.return_value = bucket_mock
+    with patch("src.cache.storage") as mock_storage:
+        mock_storage.Client.return_value.bucket.return_value = bucket_mock
         cache = GcsCache("test-bucket")
     return cache
 
@@ -130,7 +128,7 @@ def test_gcs_cache_set(tmp_path):
 
 def test_create_cache_returns_gcs_when_env_set(monkeypatch):
     monkeypatch.setenv("GCS_CACHE_BUCKET", "my-bucket")
-    with patch("google.cloud.storage.Client"):
+    with patch("src.cache.storage"):
         cache = create_cache()
     assert isinstance(cache, GcsCache)
 

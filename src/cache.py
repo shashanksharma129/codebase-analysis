@@ -3,6 +3,8 @@ import logging
 import os
 from pathlib import Path
 
+from google.cloud import storage
+
 from src.models import DomainAnalysis
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,6 @@ class DiskCache:
 
 class GcsCache:
     def __init__(self, bucket_name: str) -> None:
-        from google.cloud import storage
         self._bucket = storage.Client().bucket(bucket_name)
 
     def _key(self, files: list[Path]) -> str:
