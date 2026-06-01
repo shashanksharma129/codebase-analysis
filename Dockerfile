@@ -10,6 +10,10 @@ FROM python:3.13-slim
 WORKDIR /app
 COPY --from=builder /app/.venv .venv
 COPY src/ src/
-COPY main.py .
+COPY ui.py .
 ENV PATH="/app/.venv/bin:$PATH"
-ENTRYPOINT ["python", "main.py"]
+EXPOSE 8501
+ENTRYPOINT ["streamlit", "run", "ui.py", \
+  "--server.port=8501", \
+  "--server.address=0.0.0.0", \
+  "--server.headless=true"]
