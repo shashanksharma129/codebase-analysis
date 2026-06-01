@@ -2,6 +2,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+from evals.metrics import http_accuracy, method_precision, method_recall
 from src.analyzers.java import JavaAnalyzer
 from src.llm_factory import create_llm
 from src.models import DomainAnalysis
