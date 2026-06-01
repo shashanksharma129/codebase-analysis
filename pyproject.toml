@@ -18,6 +18,7 @@ dependencies = [
     "opentelemetry-api",
     "opentelemetry-sdk",
     "langgraph>=0.2",
+    "google-cloud-storage",
 ]
 
 [dependency-groups]
