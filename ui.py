@@ -93,7 +93,11 @@ _LANG_EXT = {"Java": ".java", "Python": ".py"}
 lang = st.selectbox("Language", list(_LANG_EXT), index=0)
 analyzer = get_analyzer(_LANG_EXT[lang])
 
-analyze_clicked = st.button("Analyze", type="primary", disabled=not url.strip())
+col_btn, col_cache = st.columns([1, 3])
+with col_btn:
+    analyze_clicked = st.button("Analyze", type="primary", disabled=not url.strip())
+with col_cache:
+    bypass_cache = st.checkbox("Bypass cache", value=False)
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
 if analyze_clicked and url.strip():
@@ -107,6 +111,7 @@ if analyze_clicked and url.strip():
     tmp = tempfile.mkdtemp()
     result = None
     error_msg = None
+    st.session_state.pop("result", None)
 
     with tracer.start_as_current_span(
         "analyze_repo",
@@ -121,7 +126,7 @@ if analyze_clicked and url.strip():
                     source, zip_bytes = _download_and_extract(owner, repo, branch, Path(tmp))
                     dl_span.set_attribute("zip_bytes", zip_bytes)
                 status.update(label="Analyzing repository...")
-                result = asyncio.run(run_pipeline(source, _llm, _cache, analyzer))
+                result = asyncio.run(run_pipeline(source, _llm, None if bypass_cache else _cache, analyzer))
                 status.update(label="Done.", state="complete")
             span.set_status(StatusCode.OK)
         except RuntimeError as e:
