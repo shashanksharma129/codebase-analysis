@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 from pathlib import Path
 
 from src.models import DomainAnalysis
@@ -28,3 +29,37 @@ class DiskCache:
     def set(self, files: list[Path], analysis: DomainAnalysis) -> None:
         path = self.cache_dir / f"{self._key(files)}.json"
         path.write_text(analysis.model_dump_json(indent=2))
+
+
+class GcsCache:
+    def __init__(self, bucket_name: str) -> None:
+        from google.cloud import storage
+        self._bucket = storage.Client().bucket(bucket_name)
+
+    def _key(self, files: list[Path]) -> str:
+        content = "".join(p.read_text(errors="ignore") for p in sorted(files))
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def get(self, files: list[Path]) -> DomainAnalysis | None:
+        key = self._key(files)
+        blob = self._bucket.blob(f"{key}.json")
+        if not blob.exists():
+            logger.debug("GCS cache miss", extra={"key": key[:8]})
+            return None
+        logger.debug("GCS cache hit", extra={"key": key[:8]})
+        return DomainAnalysis.model_validate_json(blob.download_as_text())
+
+    def set(self, files: list[Path], analysis: DomainAnalysis) -> None:
+        key = self._key(files)
+        blob = self._bucket.blob(f"{key}.json")
+        blob.upload_from_string(
+            analysis.model_dump_json(indent=2),
+            content_type="application/json",
+        )
+
+
+def create_cache() -> DiskCache | GcsCache:
+    bucket = os.environ.get("GCS_CACHE_BUCKET")
+    if bucket:
+        return GcsCache(bucket)
+    return DiskCache()
