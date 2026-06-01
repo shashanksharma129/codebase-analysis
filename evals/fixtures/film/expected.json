@@ -1,0 +1,186 @@
+{
+  "name": "film",
+  "description": "Film catalog service with HATEOAS support, caching, and role-based security for managing films and their associated actors.",
+  "file_count": 2,
+  "complexity": "medium",
+  "methods": [
+    {
+      "class": "FilmController",
+      "method_name": "getFilmList",
+      "signature": "public ResponseEntity<CollectionModel<FilmDto.FilmResponse>> getFilmList(String category, String releaseYear, String rating, Pageable pageable)",
+      "description": "Retrieves a paginated list of films with optional filters for category, release year, and rating.",
+      "http_method": "GET",
+      "endpoint": "/films",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "addFilm",
+      "signature": "public ResponseEntity<Void> addFilm(FilmDto.FilmRequest model)",
+      "description": "Creates a new film and returns its URI in the Location header.",
+      "http_method": "POST",
+      "endpoint": "/films",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "getFilm",
+      "signature": "public ResponseEntity<FilmDto.FilmResponse> getFilm(Integer filmId)",
+      "description": "Retrieves a single film by ID.",
+      "http_method": "GET",
+      "endpoint": "/films/{filmId}",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "updateFilm",
+      "signature": "public ResponseEntity<Void> updateFilm(Integer filmId, FilmDto.FilmRequest model)",
+      "description": "Updates an existing film by ID.",
+      "http_method": "PUT",
+      "endpoint": "/films/{filmId}",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "deleteFilm",
+      "signature": "public ResponseEntity<Void> deleteFilm(Integer filmId)",
+      "description": "Deletes a film by ID.",
+      "http_method": "DELETE",
+      "endpoint": "/films/{filmId}",
+      "complexity": "low"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "getFilmActorList",
+      "signature": "public ResponseEntity<CollectionModel<ActorDto.ActorResponse>> getFilmActorList(Integer filmId, Pageable pageable)",
+      "description": "Retrieves a paginated list of actors associated with a specific film.",
+      "http_method": "GET",
+      "endpoint": "/films/{filmId}/actors",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "getFilmActor",
+      "signature": "public ResponseEntity<ActorDto.ActorResponse> getFilmActor(Integer filmId, Integer actorId)",
+      "description": "Retrieves a specific actor associated with a film.",
+      "http_method": "GET",
+      "endpoint": "/films/{filmId}/actors/{actorId}",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmController",
+      "method_name": "getFilmDetails",
+      "signature": "public ResponseEntity<FilmDetailsDto.FilmDetailsResponse> getFilmDetails(Integer filmId)",
+      "description": "Retrieves detailed information for a specific film.",
+      "http_method": "GET",
+      "endpoint": "/films/{filmId}/details",
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmList",
+      "signature": "public List<FilmDto.Film> getFilmList()",
+      "description": "Retrieves all films from the repository and maps them to DTOs.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmList",
+      "signature": "public List<FilmDto.Film> getFilmList(FilmDto.FilterOption condition, Pageable pageable)",
+      "description": "Retrieves a paginated list of films, applying filters if any filter fields are set.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilm",
+      "signature": "public Optional<FilmDto.Film> getFilm(Integer filmId)",
+      "description": "Retrieves a single film by ID with caching support.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmActorList",
+      "signature": "public List<ActorDto.Actor> getFilmActorList(Integer filmId, Pageable pageable)",
+      "description": "Retrieves a paginated list of actors associated with a specific film.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmActor",
+      "signature": "public Optional<ActorDto.Actor> getFilmActor(Integer filmId, Integer actorId)",
+      "description": "Retrieves a specific actor associated with a film, throwing ResourceNotFoundException if not found.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmDetailsList",
+      "signature": "public List<FilmDetailsDto.FilmDetails> getFilmDetailsList()",
+      "description": "Retrieves detailed information for all films.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmDetails",
+      "signature": "public Optional<FilmDetailsDto.FilmDetails> getFilmDetails(Integer filmId)",
+      "description": "Retrieves detailed information for a specific film by ID, throwing ResourceNotFoundException if not found.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "getFilmRentalPrice",
+      "signature": "public BigDecimal getFilmRentalPrice(Integer filmId)",
+      "description": "Retrieves the rental rate for a specific film, throwing ResourceNotFoundException if the rate is null.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "addFilm",
+      "signature": "public FilmDto.Film addFilm(FilmDto.FilmRequest model)",
+      "description": "Saves a new film entity and returns its mapped DTO.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "updateFilm",
+      "signature": "public FilmDto.Film updateFilm(Integer filmId, FilmDto.FilmRequest model)",
+      "description": "Updates an existing film entity and updates the cache.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "medium"
+    },
+    {
+      "class": "FilmServiceImpl",
+      "method_name": "deleteFilm",
+      "signature": "public void deleteFilm(Integer filmId)",
+      "description": "Deletes a film by ID and evicts it from the cache.",
+      "http_method": null,
+      "endpoint": null,
+      "complexity": "low"
+    }
+  ],
+  "notable_aspects": [
+    "HATEOAS (Hypermedia as the Engine of Application State) representation models and link building",
+    "Spring Security @Secured annotations for role-based access control",
+    "Spring Cache abstraction (@Cacheable, @CachePut, @CacheEvict) for performance optimization",
+    "Transactional management with read-only optimizations",
+    "Optional-based null safety for resource lookups with ResourceNotFoundException on miss"
+  ]
+}
