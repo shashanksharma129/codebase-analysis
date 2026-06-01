@@ -8,7 +8,7 @@ from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from src.analyzers.base import LanguageAnalyzer
-from src.cache import DiskCache
+from src.cache import Cache
 from src.models import DomainAnalysis, FinalOutput, ProjectReport, ProjectSummary
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ async def _run_aggregation(
 async def run_pipeline(
     source: Path,
     llm: BaseChatModel,
-    cache: DiskCache | None,
+    cache: Cache | None,
     analyzer: LanguageAnalyzer,
 ) -> FinalOutput:
     with tracer.start_as_current_span("run_pipeline") as span:

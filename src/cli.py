@@ -47,7 +47,7 @@ tracer = trace.get_tracer(__name__)
     "no_cache",
     is_flag=True,
     default=False,
-    help="Disable disk cache.",
+    help="Disable analysis cache.",
 )
 @click.option(
     "--language",

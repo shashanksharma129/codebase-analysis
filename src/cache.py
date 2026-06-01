@@ -59,6 +59,9 @@ class GcsCache:
         )
 
 
+Cache = DiskCache | GcsCache
+
+
 def create_cache() -> DiskCache | GcsCache:
     bucket = os.environ.get("GCS_CACHE_BUCKET")
     if bucket:
