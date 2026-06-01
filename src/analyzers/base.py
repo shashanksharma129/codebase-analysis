@@ -4,7 +4,7 @@ from pathlib import Path
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.cache import DiskCache
+from src.cache import Cache
 from src.models import DomainAnalysis
 
 
@@ -25,7 +25,7 @@ class LanguageAnalyzer(ABC):
         domain: str,
         files: list[Path],
         llm: BaseChatModel,
-        cache: DiskCache | None,
+        cache: Cache | None,
     ) -> tuple[DomainAnalysis, list[str]]:
         """Analyze one domain. Returns (analysis, skipped_file_paths)."""
 

@@ -11,7 +11,7 @@ from opentelemetry.trace import StatusCode
 
 from src.analyzers.base import LanguageAnalyzer
 from src.ast_utils import ASTSummary, extract_ast_summary, render_ast_summary
-from src.cache import DiskCache
+from src.cache import Cache
 from src.loader import FileLoader
 from src.models import DomainAnalysis
 
@@ -201,7 +201,7 @@ class PythonAnalyzer(LanguageAnalyzer):
         domain: str,
         files: list[Path],
         llm: BaseChatModel,
-        cache: DiskCache | None,
+        cache: Cache | None,
     ) -> tuple[DomainAnalysis, list[str]]:
         with tracer.start_as_current_span(
             "analyze_domain",
