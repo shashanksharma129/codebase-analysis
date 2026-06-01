@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class MethodInfo(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    class_name: str = Field(serialization_alias="class")
+    class_name: str = Field(alias="class")
     method_name: str
     signature: str
     description: str
