@@ -86,6 +86,41 @@ uv run pytest -v            # run tests
 uv run ruff check src/      # lint
 ```
 
+## Cloud Run Deployment
+
+The Streamlit UI is deployed to GCP Cloud Run via Cloud Build.
+
+### One-time setup
+
+See `docs/superpowers/plans/2026-06-01-cloud-run-deployment.md` for the full
+`gcloud` commands to run once: enable APIs, create the Artifact Registry repo,
+GCS cache bucket, service account, IAM bindings, and Secret Manager entry.
+
+After running those commands, connect Cloud Build to your GitHub repo:
+**Cloud Build → Triggers → Connect Repository → GitHub** → select repo →
+build config: `cloudbuild.yaml`, branch: `^main$`.
+
+### Pipeline
+
+Every push to `main` triggers Cloud Build, which:
+
+1. Runs `pytest` (fast, no LLM calls)
+2. Builds the Docker image and pushes to Artifact Registry
+3. Deploys to Cloud Run (zero-downtime rolling update)
+
+### Cache
+
+On Cloud Run, the `GCS_CACHE_BUCKET=codebase-analysis-cache` env var activates
+`GcsCache` instead of `DiskCache`. Cached analyses persist across container
+restarts and scale-out instances. Locally, `DiskCache` is used as before
+(no `GCS_CACHE_BUCKET` env var).
+
+### Secrets
+
+`GOOGLE_API_KEY` is stored in Secret Manager (`google-api-key`) and injected
+as an env var at runtime. Never put API keys in `cloudbuild.yaml` or env vars
+visible in the Cloud Run console.
+
 ## Evaluation
 
 The `evals/` package is an offline quality harness that measures how accurately the LLM extracts method names, HTTP endpoints, and complexity from real Java source files.
