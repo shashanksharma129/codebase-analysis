@@ -29,7 +29,11 @@ def http_accuracy(
     expected_http = [m for m in expected_methods if m.http_method]
     if not expected_http:
         return None
-    found_by_name = {_normalize(m.method_name): m for m in found_methods}
+    found_by_name: dict[str, MethodInfo] = {}
+    for m in found_methods:
+        key = _normalize(m.method_name)
+        if key not in found_by_name or m.http_method is not None:
+            found_by_name[key] = m
     matches = 0
     for exp in expected_http:
         found = found_by_name.get(_normalize(exp.method_name))

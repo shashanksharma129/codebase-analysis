@@ -1,7 +1,11 @@
 import argparse
 import sys
 
+from dotenv import load_dotenv
+
 from evals.runner import run_evals
+
+load_dotenv()
 
 
 def main() -> None:
