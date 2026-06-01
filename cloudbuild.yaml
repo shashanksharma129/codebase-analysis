@@ -16,9 +16,9 @@ steps:
     args:
       - build
       - -t
-      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:$COMMIT_SHA
+      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analysis/ui:$COMMIT_SHA
       - -t
-      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:latest
+      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analysis/ui:latest
       - .
     waitFor: [test]
 
@@ -28,7 +28,7 @@ steps:
     args:
       - push
       - --all-tags
-      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui
+      - us-central1-docker.pkg.dev/codebase-analysis/codebase-analysis/ui
     waitFor: [build]
 
   # Deploy to Cloud Run
@@ -39,7 +39,7 @@ steps:
       - run
       - deploy
       - codebase-analyzer
-      - --image=us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:$COMMIT_SHA
+      - --image=us-central1-docker.pkg.dev/codebase-analysis/codebase-analysis/ui:$COMMIT_SHA
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
@@ -55,8 +55,8 @@ steps:
     waitFor: [push]
 
 images:
-  - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:$COMMIT_SHA
-  - us-central1-docker.pkg.dev/codebase-analysis/codebase-analyzer/ui:latest
+  - us-central1-docker.pkg.dev/codebase-analysis/codebase-analysis/ui:$COMMIT_SHA
+  - us-central1-docker.pkg.dev/codebase-analysis/codebase-analysis/ui:latest
 
 options:
   logging: CLOUD_LOGGING_ONLY
