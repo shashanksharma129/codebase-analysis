@@ -9,7 +9,7 @@ from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from src.analyzers import get_analyzer
-from src.cache import DiskCache
+from src.cache import create_cache
 from src.llm_factory import create_llm
 from src.observability import setup_telemetry
 from src.pipeline import run_pipeline
@@ -67,7 +67,7 @@ def analyze(
     """Analyze a codebase and extract structured knowledge to JSON."""
     setup_telemetry()
     llm = create_llm(provider, model)
-    cache = None if no_cache else DiskCache()
+    cache = None if no_cache else create_cache()
     _ext_map = {"java": ".java", "python": ".py"}
     analyzer = get_analyzer(_ext_map[language])
 

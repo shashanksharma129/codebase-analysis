@@ -16,7 +16,7 @@ from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from src.analyzers import get_analyzer
-from src.cache import DiskCache
+from src.cache import create_cache
 from src.llm_factory import create_llm
 from src.observability import setup_telemetry
 from src.pipeline import run_pipeline
@@ -66,7 +66,7 @@ def _download_and_extract(owner: str, repo: str, branch: str, dest: Path) -> tup
 # LLM + cache initialised once at startup
 try:
     _llm = create_llm()
-    _cache = DiskCache()
+    _cache = create_cache()
 except click.ClickException as e:
     st.error(e.format_message())
     st.stop()
