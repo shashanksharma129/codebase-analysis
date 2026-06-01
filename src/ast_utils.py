@@ -64,6 +64,10 @@ def _decorator_str(node) -> str:
         return "@<decorator>"
 
 
+def _is_private(name: str) -> bool:
+    return name.startswith("_") and not (name.startswith("__") and name.endswith("__"))
+
+
 def _parse_file(path: Path) -> FileSummary:
     source = path.read_text(errors="ignore")
     tree = ast.parse(source, filename=str(path))
@@ -88,7 +92,7 @@ def _parse_file(path: Path) -> FileSummary:
                     pass
             classes.append(f"{node.name}{bases}")
             for item in node.body:
-                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and not _is_private(item.name):
                     methods.append(MethodSummary(
                         name=item.name,
                         signature=_build_signature(item),
@@ -100,7 +104,7 @@ def _parse_file(path: Path) -> FileSummary:
 
     # module-level functions (direct children of module only)
     for node in ast.iter_child_nodes(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not _is_private(node.name):
             methods.append(MethodSummary(
                 name=node.name,
                 signature=_build_signature(node),

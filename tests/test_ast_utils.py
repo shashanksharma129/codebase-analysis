@@ -113,3 +113,24 @@ def test_class_inheritance_captured(tmp_path):
     f = _write(tmp_path, "router.py", "from fastapi import APIRouter\nclass UserRouter(APIRouter): pass")
     summary, _ = extract_ast_summary([f])
     assert any("UserRouter" in c for c in summary.files[0].classes)
+
+
+def test_private_methods_excluded(tmp_path):
+    f = _write(tmp_path, "svc.py", """
+class MyService:
+    def public_method(self): pass
+    def _private_helper(self): pass
+    def __init__(self): pass
+    def __str__(self): pass
+
+def module_public(): pass
+def _module_private(): pass
+""")
+    summary, _ = extract_ast_summary([f])
+    names = {m.name for m in summary.files[0].methods}
+    assert "public_method" in names
+    assert "__init__" in names
+    assert "__str__" in names
+    assert "_private_helper" not in names
+    assert "module_public" in names
+    assert "_module_private" not in names
