@@ -86,6 +86,57 @@ uv run pytest -v            # run tests
 uv run ruff check src/      # lint
 ```
 
+## Evaluation
+
+The `evals/` package is an offline quality harness that measures how accurately the LLM extracts method names, HTTP endpoints, and complexity from real Java source files.
+
+### What it tests
+
+Three metrics are computed against hand-reviewed ground truth (`evals/fixtures/<name>/expected.json`):
+
+| Metric | Formula | Pass threshold |
+|---|---|---|
+| **Method recall** | `found ∩ expected / expected` | ≥ 0.85 |
+| **Method precision** | `found ∩ expected / found` | ≥ 0.75 |
+| **HTTP accuracy** | methods where verb AND path match / methods with expected HTTP | ≥ 0.90 |
+
+Recall measures whether the LLM missed any methods. Precision measures whether it hallucinated extra ones. HTTP accuracy only applies to fixtures that have annotated endpoints.
+
+Two fixtures are included:
+
+- **actor** — simple CRUD domain (`ActorController` + `ActorServiceImpl`); 12 HTTP handlers, 13 service methods. Tests baseline method recall and HTTP extraction.
+- **film** — more complex domain with caching, pagination, and HATEOAS; 8 HTTP handlers, 11 service methods with overloads. Tests edge cases like overloaded method names.
+
+### Running
+
+**Real LLM run** (requires API key in `.env`):
+```bash
+python -m evals                     # run all fixtures
+python -m evals --fixture actor     # run one fixture
+```
+
+Saves LLM output to `evals/results/<name>.json` for later replay.
+
+**Replay mode** (no LLM call, fast, used in CI):
+```bash
+python -m evals --replay
+python -m evals --replay --fixture actor
+```
+
+Loads the saved result from a prior real run and rescores it. Exits 0 if all fixtures pass, 1 otherwise.
+
+### How it works
+
+```
+evals/fixtures/<name>/input/*.java   ← Java source files (committed)
+evals/fixtures/<name>/expected.json  ← hand-reviewed DomainAnalysis JSON (committed)
+evals/results/<name>.json            ← saved LLM output from real runs (gitignored)
+```
+
+The ground truth in `expected.json` was produced by running the LLM once and then manually reviewing and correcting each method entry against the Java source. That human review step is what makes it ground truth — it is not auto-generated.
+
+Name comparison is normalized (lowercased, underscores and spaces stripped) to absorb stylistic differences like `getActor` vs `get_actor`.
+
 ## Assumptions & Limitations
 
 - Domain grouping works best with package-style layouts (`services/`, `modules/`, etc.)
